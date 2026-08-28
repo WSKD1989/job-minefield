@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>应聘避坑小工具 · 求职路上的避坑雷达</title>
+<!-- 字体：衬线标题 + 现代正文 + 等宽数字 -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700;900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+/* ================= 设计令牌 ================= */
+:root {
+  --bg: #0a0e16;
+  --bg-2: #0e1420;
+  --panel: rgba(255, 255, 255, 0.035);
+  --panel-2: rgba(255, 255, 255, 0.06);
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --ink: #e9edf5;
+  --muted: #8d97ab;
+  --faint: #5b6475;
+
+  --accent: #f5a742;        /* 琥珀：产品主色 */
+  --accent-soft: rgba(245, 167, 66, 0.14);
+  --ai: #52c7e8;             /* 青色：AI 能力 */
+  --good: #3ddc97;
+  --warn: #fbbf24;
+  --danger: #f87171;
+
+  /* 风险等级 chip —— 与产品内配色一致 */
+  --risk-x: #8b1e1e;
+  --risk-h-bg: #fde8e8; --risk-h-ink: #c0392b;
+  --risk-m-bg: #fff4d6; --risk-m-ink: #b26a00;
+  --risk-l-bg: #e2f5ec; --risk-l-ink: #1e7d4f;
+
+  --font-display: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  --font-body: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+
+  --radius: 14px;
+  --radius-sm: 8px;
+  --radius-full: 999px;
+  --shadow: 0 24px 70px -20px rgba(0, 0, 0, 0.65);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.7;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 背景氛围：网格 + 光晕 + 噪点 */
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, #000 40%, transparent 100%);
+}
+.bg-glow {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(520px 340px at 78% -8%, rgba(245,167,66,0.14), transparent 70%),
+    radial-gradient(600px 420px at 12% 12%, rgba(82,199,232,0.10), transparent 70%),
+    radial-gradient(800px 600px at 50% 110%, rgba(61,220,151,0.07), transparent 70%);
+  pointer-events: none;
+}
+.bg-noise {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.05;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+}
+
+/* ================= 通用 ================= */
+.container { width: min(1120px, 92vw); margin: 0 auto; }
+
+.section { padding: 96px 0; position: relative; }
+
+.section-head { max-width: 640px; margin-bottom: 48px; }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.14em;
+  color: var(--accent); text-transform: uppercase;
+  padding: 6px 14px; border: 1px solid rgba(245,167,66,0.35);
+  border-radius: var(--radius-full); background: var(--accent-soft);
+  margin-bottom: 18px;
+}
+.section-head h2 {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 4vw, 40px);
+  font-weight: 900;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+}
+.section-head h2 em {
+  font-style: normal;
+  color: var(--accent);
+}
+.section-head p { color: var(--muted); margin-top: 14px; font-size: 15.5px; }
+
+/* 进场动画 */
+.reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease; }
+.reveal.in { opacity: 1; transform: none; }
+
+/* ================= 顶栏 ================= */
+.nav {
+  position: sticky; top: 0; z-index: 50;
+  backdrop-filter: blur(14px);
+  background: rgba(10, 14, 22, 0.72);
+  border-bottom: 1px solid var(--line);
+}
+.nav-inner {
+  width: min(1120px, 92vw); margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 60px;
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; }
+.brand .logo {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--accent), #e07b28);
+  color: #1a1205; font-weight: 900;
+  box-shadow: 0 6px 18px -6px rgba(245,167,66,0.6);
+}
+.nav-links { display: flex; gap: 26px; list-style: none; }
+.nav-links a {
+  color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500;
+  transition: color .2s;
+}
+.nav-links a:hover { color: var(--ink); }
+.nav-cta {
+  color: var(--accent); font-size: 14px; font-weight: 700;
+  text-decoration: none; padding: 8px 16px;
+  border: 1px solid rgba(245,167,66,0.4); border-radius: var(--radius-full);
+  transition: background .2s, color .2s;
+}
+.nav-cta:hover { background: var(--accent-soft); }
+@media (max-width: 760px) { .nav-links { display: none; } }
+
+/* ================= Hero ================= */
+.hero { padding: 92px 0 40px; position: relative; }
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 64px; align-items: center;
+}
+.hero-kicker {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 600; color: var(--ai);
+  padding: 6px 12px; border-radius: var(--radius-full);
+  background: rgba(82,199,232,0.1); border: 1px solid rgba(82,199,232,0.3);
+  margin-bottom: 22px;
+}
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(38px, 5.6vw, 62px);
+  font-weight: 900; line-height: 1.18;
+  letter-spacing: 0.01em;
+}
+.hero h1 em { font-style: normal; color: var(--accent); position: relative; white-space: nowrap; }
+.hero h1 em::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 2px; height: 10px;
+  background: linear-gradient(90deg, rgba(245,167,66,0.4), transparent);
+  z-index: -1; border-radius: 4px;
+}
+.hero-sub { color: var(--muted); margin: 22px 0 30px; font-size: 16.5px; max-width: 480px; }
+.hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 9px;
+  text-decoration: none; font-weight: 700; font-size: 15px;
+  padding: 13px 26px; border-radius: var(--radius-full);
+  transition: transform .2s, box-shadow .2s, background .2s;
+}
+.btn-primary {
+  color: #1a1205; background: linear-gradient(135deg, #ffc06a, var(--accent));
+  box-shadow: 0 12px 32px -10px rgba(245,167,66,0.55);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 18px 40px -10px rgba(245,167,66,0.7); }
+.btn-ghost {
+  color: var(--ink); border: 1px solid var(--line-strong); background: var(--panel);
+}
+.btn-ghost:hover { background: var(--panel-2); transform: translateY(-2px); }
+.btn .kbd {
+  font-family: var(--font-mono); font-size: 11px; opacity: 0.7;
+  border: 1px solid currentColor; border-radius: 5px; padding: 1px 5px;
+}
+
+.hero-features { display: flex; gap: 26px; margin-top: 40px; flex-wrap: wrap; }
+.hero-features li {
+  list-style: none; display: flex; align-items: center; gap: 9px;
+  color: var(--muted); font-size: 13.5px;
+}
+.hero-features .dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.dot.ai { background: var(--ai); box-shadow: 0 0 10px rgba(82,199,232,.8); }
+.dot.ofl { background: var(--good); box-shadow: 0 0 10px rgba(61,220,151,.8); }
+.dot.loc { background: var(--accent); box-shadow: 0 0 10px rgba(245,167,66,.8); }
+
+/* ===== 主窗口 mock：公司列表 ===== */
+.mock-window {
+  width: 100%;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #121a2c, #0d1422);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transform: rotate(1.2deg) scale(1.02);
+  transition: transform .5s ease;
+}
+.mock-window:hover { transform: rotate(0deg) scale(1.02); }
+.mock-titlebar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--line);
+}
+.mock-titlebar .t { width: 11px; height: 11px; border-radius: 50%; }
+.mock-titlebar .t1 { background: #ff5f57; } .mock-titlebar .t2 { background: #febc2e; } .mock-titlebar .t3 { background: #28c840; }
+.mock-titlebar .addr {
+  margin-left: 10px; flex: 1;
+  font-family: var(--font-mono); font-size: 12px; color: var(--faint);
+  background: rgba(0,0,0,0.25); padding: 4px 12px; border-radius: 7px;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.window-body { padding: 16px 18px; }
+
+/* 统计条 */
+.mock-stats { display: flex; justify-content: space-between; padding: 4px 2px 16px; border-bottom: 1px dashed var(--line); margin-bottom: 14px; }
+.mock-stat { text-align: center; }
+.mock-stat .n { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--ink); }
+.mock-stat .l { font-size: 11px; color: var(--faint); margin-top: 2px; }
+.mock-stat .n.acc { color: var(--accent); }
+.mock-stat .n.ai { color: var(--ai); }
+
+/* 公司卡片 mock */
+.mock-card { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 12px; margin-bottom: 9px; background: rgba(255,255,255,0.03); border: 1px solid transparent; transition: border .2s, background .2s; }
+.mock-card:hover { border-color: rgba(245,167,66,0.4); background: rgba(245,167,66,0.05); }
+.mock-rank {
+  width: 24px; height: 24px; border-radius: 7px; flex-shrink: 0;
+  display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  background: rgba(82,199,232,0.16); color: var(--ai);
+}
+.mock-info { flex: 1; min-width: 0; }
+.mock-info .nm { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mock-info .ind { font-size: 12px; color: var(--faint); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mock-score {
+  flex-shrink: 0; padding: 4px 10px; border-radius: var(--radius-full);
+  font-family: var(--font-mono); font-size: 13px; font-weight: 700;
+}
+.mock-score.good { background: rgba(61,220,151,0.16); color: var(--good); }
+.mock-score.mid  { background: rgba(82,199,232,0.16); color: var(--ai); }
+.mock-score.low  { background: rgba(251,191,36,0.16); color: var(--warn); }
+.mock-score.bad  { background: rgba(248,113,113,0.16); color: var(--danger); }
+.mock-score.na   { background: rgba(255,255,255,0.07); color: var(--faint); }
+
+/* 风险 chip —— 完全复刻产品内样式 */
+.risk-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 9px; border-radius: var(--radius-full);
+  font-size: 12px; line-height: 1.5; white-space: nowrap;
+  flex-shrink: 0; font-weight: 600;
+}
+.risk-x { background: var(--risk-x); color: #fff; font-weight: 700; }
+.risk-h { background: var(--risk-h-bg); color: var(--risk-h-ink); }
+.risk-m { background: var(--risk-m-bg); color: var(--risk-m-ink); }
+.risk-l { background: var(--risk-l-bg); color: var(--risk-l-ink); }
+
+/* 标签 chip */
+.tag-chip {
+  display: inline-flex; align-items: center;
+  font-size: 11px; color: var(--muted);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--line);
+  padding: 1px 8px; border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+.mock-tagrow { display: flex; gap: 5px; flex-wrap: wrap; }
+
+.mock-dots { display: flex; gap: 14px; align-items: center; color: var(--faint); font-size: 16px; }
+
+/* 浮动附属卡 */
+.float-ai {
+  position: absolute; left: -34px; bottom: 30px;
+  width: 300px; z-index: 3;
+  padding: 14px 16px; border-radius: var(--radius);
+  background: rgba(16, 24, 42, 0.92); backdrop-filter: blur(10px);
+  border: 1px solid rgba(82,199,232,0.35);
+  box-shadow: var(--shadow);
+  animation: floaty 5s ease-in-out infinite;
+}
+.float-ai .row-t { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--ai); }
+.float-ai p { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+.float-ai .spark { display: inline-block; width: 20px; height: 20px; border-radius: 6px; background: rgba(82,199,232,0.18); display: grid; place-items: center; font-size: 12px; }
+@keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+.wrap-float { position: relative; }
+
+/* 侧边小标注 */
+.hero-side-note {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 26px; font-size: 12.5px; color: var(--faint);
+}
+.hero-side-note .line { flex: 1; height: 1px; background: var(--line); }
+
+/* ================= 数据条 ================= */
+.stat-band { padding: 42px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--bg-2); }
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; text-align: center; }
+.stat-item .v {
+  font-family: var(--font-mono); font-size: clamp(26px, 3.4vw, 40px); font-weight: 700;
+  background: linear-gradient(180deg, #fff, #9fb0c9);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.stat-item .v mark { background: none; color: var(--accent); }
+.stat-item .k { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+/* ================= 功能区块通用 ================= */
+.bi-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;
+  align-items: stretch;
+}
+@media (max-width: 900px) { .bi-grid { grid-template-columns: 1fr; } }
+
+.bi-card {
+  position: relative;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--panel); overflow: hidden;
+  padding: 28px 28px 24px;
+  transition: transform .25s ease, border-color .25s ease, background .25s ease;
+}
+.bi-card:hover { transform: translateY(-4px); border-color: rgba(245,167,66,0.35); }
+.bi-card .num {
+  position: absolute; top: 18px; right: 22px;
+  font-family: var(--font-display); font-size: 56px; font-weight: 900;
+  color: rgba(255,255,255,0.045); line-height: 1; user-select: none;
+}
+.bi-card h3 { font-size: 18.5px; font-weight: 700; display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.bi-card h3 .ic {
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+  display: grid; place-items: center; font-size: 16px;
+}
+.ic-amber { background: var(--accent-soft); color: var(--accent); }
+.ic-cyan  { background: rgba(82,199,232,0.14); color: var(--ai); }
+.ic-green { background: rgba(61,220,151,0.13); color: var(--good); }
+.ic-red   { background: rgba(248,113,113,0.13); color: var(--danger); }
+.bi-card > p { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+.bi-card ul.detail { list-style: none; display: grid; gap: 8px; }
+.bi-card ul.detail li { display: flex; gap: 9px; font-size: 13.5px; color: var(--muted); }
+.bi-card ul.detail li b { color: var(--ink); font-weight: 600; }
+.bi-card ul.detail .chk { color: var(--good); flex-shrink: 0; font-weight: 700; }
+
+/* 双列大卡（AI 评分 + 风险）内部 mock */
+.double {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+  align-items: stretch;
+}
+@media (max-width: 900px) { .double { grid-template-columns: 1fr; } }
+.mini-panel {
+  border: 1px solid var(--line); border-radius: 12px;
+  background: rgba(255,255,255,0.025); padding: 16px;
+}
+.mini-title { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--faint); margin-bottom: 12px; letter-spacing: 0.05em; }
+.mini-title b { color: var(--muted); letter-spacing: 0; }
+
+/* 评分分档条 */
+.grade-row { display: flex; gap: 7px; margin-top: 12px; flex-wrap: wrap; }
+.grade {
+  flex: 1; min-width: 74px; text-align: center;
+  padding: 8px 6px; border-radius: 9px; font-size: 11.5px; font-weight: 600;
+  border: 1px solid var(--line);
+}
+.grade .gv { display: block; font-family: var(--font-mono); font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+.g-ok  { background: rgba(61,220,151,0.1);  color: var(--good);  border-color: rgba(61,220,151,0.3); }
+.g-mid { background: rgba(82,199,232,0.1);  color: var(--ai);    border-color: rgba(82,199,232,0.3); }
+.g-wa  { background: rgba(251,191,36,0.1);  color: var(--warn);  border-color: rgba(251,191,36,0.3); }
+.g-ba  { background: rgba(248,113,113,0.1); color: var(--danger); border-color: rgba(248,113,113,0.3); }
+
+/* AI 摘要条 */
+.ai-strip {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12.5px; color: var(--muted); line-height: 1.6;
+  padding: 11px 12px; border-radius: 10px;
+  background: rgba(82,199,232,0.07); border: 1px solid rgba(82,199,232,0.22);
+  margin-top: 12px;
+}
+.ai-strip .lab { flex-shrink: 0; font-size: 11px; font-weight: 800; color: var(--ai); letter-spacing: 0.08em; }
+
+/* 风险四色一览 */
+.risk-legend { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+.risk-legend .cap { font-size: 11.5px; color: var(--faint); margin-right: 2px; }
+
+/* ================= 录入区块 ================= */
+.ocr-mini {
+  margin-top: 16px; border: 1px dashed rgba(82,199,232,0.4);
+  border-radius: 12px; padding: 16px; text-align: center;
+  background: rgba(82,199,232,0.04);
+}
+.ocr-mini .big { font-size: 26px; margin-bottom: 6px; }
+.ocr-mini p { font-size: 12.5px; color: var(--muted); }
+.flow-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.flow-step {
+  flex: 1; min-width: 120px; text-align: center;
+  padding: 12px 8px; border-radius: 10px; background: var(--panel-2);
+  border: 1px solid var(--line); font-size: 12.5px; color: var(--muted);
+}
+.flow-step b { display: block; font-size: 14px; color: var(--ink); margin-bottom: 2px; }
+.flow-arrow { color: var(--accent); font-weight: 700; }
+
+/* ================= 检索区块 ================= */
+.toolbar-mock {
+  border: 1px solid var(--line); border-radius: 12px;
+  background: rgba(255,255,255,0.025); padding: 14px;
+  margin-top: 20px;
+}
+.toolbar-mock .trow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.search-box {
+  flex: 1; min-width: 180px;
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(0,0,0,0.25); border: 1px solid var(--line);
+  padding: 8px 12px; border-radius: 9px; font-size: 13px; color: var(--faint);
+}
+.search-box .caret { width: 1.5px; height: 14px; background: var(--accent); animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.pill-btn {
+  font-size: 12px; color: var(--muted); border: 1px solid var(--line);
+  padding: 7px 12px; border-radius: var(--radius-full); background: var(--panel);
+  white-space: nowrap;
+}
+.pill-btn.on { background: var(--accent-soft); color: var(--accent); border-color: rgba(245,167,66,0.45); }
+.pill-btn .srt {
+  display: inline-block; font-family: var(--font-mono); font-size: 11px;
+  margin-left: 5px; color: var(--faint);
+}
+.mock-viewbtns { display: flex; gap: 4px; margin-left: auto; }
+.mock-viewbtns span {
+  width: 30px; height: 26px; border-radius: 7px; display: grid; place-items: center;
+  font-size: 12px; border: 1px solid var(--line); color: var(--faint);
+}
+.mock-viewbtns span.on { background: var(--panel-2); color: var(--ink); border-color: var(--line-strong); }
+
+/* 分组小标题 */
+.group-label {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 12.5px; color: var(--muted); margin: 16px 0 8px;
+  font-weight: 600;
+}
+.group-label .gdot { width: 9px; height: 9px; border-radius: 50%; }
+.group-label .cnt { margin-left: auto; font-family: var(--font-mono); color: var(--faint); font-size: 11.5px; }
+
+/* 批量操作栏 */
+.batch-mock {
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 16px; padding: 12px 14px; border-radius: 12px;
+  background: rgba(245,167,66,0.08); border: 1px solid rgba(245,167,66,0.4);
+  font-size: 13px; color: var(--ink);
+}
+.batch-mock .cnt { font-family: var(--font-mono); font-weight: 700; color: var(--accent); }
+.batch-mock .sp { flex: 1; }
+.batch-mock .mini {
+  font-size: 12px; padding: 6px 12px; border-radius: var(--radius-full);
+  border: 1px solid var(--line-strong); color: var(--muted); cursor: default;
+}
+.batch-mock .mini.danger { border-color: rgba(248,113,113,0.5); color: var(--danger); }
+
+/* ================= 流程区块：投递时间线 ================= */
+.timeline-mock { margin-top: 20px; }
+.tl-line {
+  position: relative; padding: 0 0 0 26px; margin: 14px 0;
+}
+.tl-line::before {
+  content: ""; position: absolute; left: 6px; top: 8px; bottom: -14px; width: 2px;
+  background: linear-gradient(180deg, var(--line-strong), rgba(255,255,255,0.02));
+}
+.tl-line:last-child::before { display: none; }
+.tl-dot {
+  position: absolute; left: 0; top: 5px; width: 14px; height: 14px;
+  border-radius: 50%; border: 3px solid var(--bg);
+  background: var(--accent); box-shadow: 0 0 0 2px rgba(245,167,66,0.5);
+}
+.tl-dot.ai-d { background: var(--ai); box-shadow: 0 0 0 2px rgba(82,199,232,0.5); }
+.tl-dot.g-d  { background: var(--good); box-shadow: 0 0 0 2px rgba(61,220,151,0.5); }
+.tl-line .who { font-size: 13px; color: var(--muted); }
+.tl-line .who b { color: var(--ink); font-weight: 700; }
+.tl-line .msg {
+  display: inline-block; margin-top: 5px;
+  font-size: 13px; color: var(--muted);
+  background: var(--panel); border: 1px solid var(--line);
+  padding: 8px 12px; border-radius: 4px 12px 12px 12px;
+}
+.tl-line.in .msg { border-radius: 12px 4px 12px 12px; background: rgba(82,199,232,0.07); border-color: rgba(82,199,232,0.25); }
+
+/* 岗位条 */
+.pos-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--panel);
+  margin-top: 10px; font-size: 13px;
+}
+.pos-row .pname { font-weight: 700; flex: 1; }
+.pos-row .meta { color: var(--muted); font-size: 12.5px; }
+.salary { color: var(--accent); font-family: var(--font-mono); font-weight: 700; white-space: nowrap; }
+
+/* ================= 数据安全 ================= */
+.sec-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; }
+@media (max-width: 900px) { .sec-grid { grid-template-columns: 1fr; } }
+.import-flow {
+  display: flex; flex-direction: column; gap: 10px; margin-top: 18px;
+  border: 1px dashed var(--line-strong); border-radius: 12px; padding: 14px;
+}
+.if-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+.if-num {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  background: var(--accent-soft); color: var(--accent);
+}
+.if-row b { color: var(--ink); }
+.if-preview {
+  margin-top: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+}
+.if-preview .cell {
+  background: var(--panel);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px;
+  font-size: 12px; color: var(--muted);
+  display: flex; justify-content: space-between;
+}
+.if-preview .cell b { font-family: var(--font-mono); color: var(--ink); }
+
+/* 表单保护说明条 */
+.guard-strip {
+  display: flex; gap: 12px; align-items: flex-start;
+  margin-top: 16px; padding: 13px 14px;
+  border-radius: 11px; background: rgba(251,191,36,0.07);
+  border: 1px solid rgba(251,191,36,0.28);
+  font-size: 13px; color: var(--muted); line-height: 1.6;
+}
+.guard-strip .ic { color: var(--warn); font-size: 17px; line-height: 1.3; flex-shrink: 0; }
+
+/* ================= CTA ================= */
+.cta-box {
+  position: relative; text-align: center; padding: 80px 24px;
+  border-radius: 22px; overflow: hidden;
+  border: 1px solid rgba(245,167,66,0.3);
+  background:
+    radial-gradient(400px 200px at 20% 0%, rgba(245,167,66,0.12), transparent 70%),
+    radial-gradient(400px 240px at 85% 100%, rgba(82,199,232,0.10), transparent 70%),
+    var(--bg-2);
+}
+.cta-box h2 {
+  font-family: var(--font-display); font-weight: 900;
+  font-size: clamp(28px, 4.4vw, 44px); line-height: 1.25;
+}
+.cta-box h2 em { font-style: normal; color: var(--accent); }
+.cta-box p { color: var(--muted); margin: 16px auto 30px; max-width: 480px; }
+.cta-box .ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+footer {
+  padding: 44px 0 60px; border-top: 1px solid var(--line);
+  color: var(--faint); font-size: 13px;
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+}
+footer .tagline { color: var(--muted); }
+footer .mono { font-family: var(--font-mono); }
+
+@media (max-width: 900px) {
+  .hero-grid { grid-template-columns: 1fr; gap: 48px; }
+  .hero { padding-top: 60px; }
+  .float-ai { position: static; width: 100%; margin-top: 18px; }
+  .mock-window { transform: none; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 26px; }
+}
+</style>
+</head>
+<body>
+
+<!-- 背景层 -->
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+<div class="bg-noise"></div>
+
+<!-- ================= 顶栏 ================= -->
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="brand">
+      <span class="logo">避</span>
+      应聘避坑小工具
+    </div>
+    <ul class="nav-links">
+      <li><a href="#ai">AI 评分</a></li>
+      <li><a href="#capture">录入</a></li>
+      <li><a href="#organize">检索组织</a></li>
+      <li><a href="#pipeline">投递流程</a></li>
+      <li><a href="#backup">数据安全</a></li>
+    </ul>
+    <a class="nav-cta" href="#get">立即开始</a>
+  </div>
+</nav>
+
+<!-- ================= Hero ================= -->
+<header class="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <!-- 左侧文案 -->
+      <div class="hero-copy reveal in">
+        <span class="hero-kicker">⚡ AI 加持 · 完全本地 · 桌面应用</span>
+        <h1>求职路上，做自己的<em>避坑雷达</em></h1>
+        <p class="hero-sub">
+          把投递的每一家公司变成一张追踪档案卡——AI 综合评分、人工风险标注、
+          投递进度、岗位薪资、沟通记录，全部井井有条。识别风险公司，不再踩坑。
+        </p>
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href="#features">浏览全部功能 <span class="kbd">↓</span></a>
+          <a class="btn btn-ghost" href="#get">下载体验</a>
+        </div>
+        <ul class="hero-features">
+          <li><i class="dot ai"></i>离线 OCR 识别</li>
+          <li><i class="dot ofl"></i>数据本地保存</li>
+          <li><i class="dot loc"></i>AI 风险预判</li>
+        </ul>
+      </div>
+
+      <!-- 右侧应用窗口 mock -->
+      <div class="wrap-float reveal in" style="transition-delay:.15s">
+        <div class="mock-window">
+          <div class="mock-titlebar">
+            <span class="t t1"></span><span class="t t2"></span><span class="t t3"></span>
+            <span class="addr">应聘避坑小工具 — 公司 · 共 23 家（示意数据）</span>
+          </div>
+          <div class="window-body">
+            <!-- 顶部统计 -->
+            <div class="mock-stats">
+              <div class="mock-stat"><div class="n">23</div><div class="l">收录公司</div></div>
+              <div class="mock-stat"><div class="n">41</div><div class="l">累计投递</div></div>
+              <div class="mock-stat"><div class="n">21</div><div class="l">已评分</div></div>
+              <div class="mock-stat"><div class="n acc">67.4</div><div class="l">平均分</div></div>
+            </div>
+            <!-- 公司卡片 -->
+            <div class="mock-card">
+              <span class="mock-rank">3</span>
+              <div class="mock-info">
+                <div class="nm">某某科技股份有限公司（示意）</div>
+                <div class="ind">互联网 · 软件</div>
+              </div>
+              <span class="risk-chip risk-h">风险高</span>
+              <span class="mock-score good">82</span>
+            </div>
+            <div class="mock-card">
+              <span class="mock-rank">7</span>
+              <div class="mock-info">
+                <div class="nm">×× 智造（上海）有限公司</div>
+                <div class="ind">智能制造 · 外包</div>
+              </div>
+              <div class="mock-tagrow"><span class="tag-chip">已读不回</span><span class="tag-chip">人力外包</span></div>
+              <span class="mock-score mid">61</span>
+            </div>
+            <div class="mock-card">
+              <span class="mock-rank">11</span>
+              <div class="mock-info">
+                <div class="nm">×× 数据服务有限公司</div>
+                <div class="ind">数据标注 · 外派</div>
+              </div>
+              <span class="risk-chip risk-x">风险极高</span>
+              <span class="mock-score bad">31</span>
+            </div>
+            <div class="mock-card">
+              <span class="mock-rank">15</span>
+              <div class="mock-info">
+                <div class="nm">×× 网络科技有限公司</div>
+                <div class="ind">SaaS · 自研</div>
+              </div>
+              <span class="risk-chip risk-l">风险低</span>
+              <span class="mock-score na">--</span>
+            </div>
+          </div>
+        </div>
+        <!-- AI 摘要浮动卡 -->
+        <div class="float-ai">
+          <div class="row-t"><span class="spark">✨</span> AI 综合评分</div>
+          <p>「×× 创新科技」评分 87／100：自研产品线，近两年融过两轮，无裁员记录，建议优先推进。</p>
+        </div>
+      </div>
+    </div>
+    <div class="hero-side-note reveal in" style="transition-delay:.3s">
+      <span>基于 DeepSeek 大模型本地调用 · 数据仅存本机</span>
+      <i class="line"></i>
+    </div>
+  </div>
+</header>
+
+<!-- ================= 数据条 ================= -->
+<section class="stat-band">
+  <div class="container">
+    <div class="stat-grid">
+      <div class="stat-item reveal"><div class="v">0<mark>→</mark>∞</div><div class="k">公司档案容量</div></div>
+      <div class="stat-item reveal"><div class="v">0–100</div><div class="k">AI 评分区间</div></div>
+      <div class="stat-item reveal"><div class="v">4<mark>级</mark></div><div class="k">风险分级标注</div></div>
+      <div class="stat-item reveal"><div class="v">100<mark>%</mark></div><div class="k">数据本机保存</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 01 AI + 风险 ================= -->
+<section class="section" id="ai">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">01 · 双保险风控</span>
+      <h2>AI 先打分，人工再标注<br>风险<em>无处遁形</em></h2>
+      <p>大模型为公司做综合画像与风险预判，你再用人工风险等级亲手把关——机器判断 + 亲身体感，双层过滤坑位公司。</p>
+    </div>
+
+    <div class="double">
+      <!-- AI 评分卡 -->
+      <div class="bi-card reveal">
+        <span class="num">01</span>
+        <h3><span class="ic ic-cyan">✨</span> AI 综合评分</h3>
+        <p>一键调用 DeepSeek 大模型，基于公司规模、融资、口碑、劳动风险等信息给出 0–100 分与摘要。</p>
+        <div class="mini-panel">
+          <div class="mini-title">评分档位 <b>随分数自动配色</b></div>
+          <div class="grade-row">
+            <div class="grade g-ok"><span class="gv">≥ 80</span>推荐投递</div>
+            <div class="grade g-mid"><span class="gv">60–79</span>谨慎考察</div>
+            <div class="grade g-wa"><span class="gv">40–59</span>风险偏高</div>
+            <div class="grade g-ba"><span class="gv">&lt; 40</span>建议避雷</div>
+          </div>
+          <div class="ai-strip"><span class="lab">AI 摘要</span>「×× 创新科技」87/100：自研产品线，近两年两轮融资，无裁员记录，建议优先推进。</div>
+        </div>
+        <ul class="detail">
+          <li><span class="chk">✓</span><span><b>评分摘要</b>——一句话结论直达重点</span></li>
+          <li><span class="chk">✓</span><span><b>详细分析</b>——完整推理过程可回溯</span></li>
+          <li><span class="chk">✓</span><span><b>自动联动</b>——可按评分一键排序筛选</span></li>
+        </ul>
+      </div>
+
+      <!-- 风险标注卡 -->
+      <div class="bi-card reveal" style="transition-delay:.1s">
+        <span class="num">02</span>
+        <h3><span class="ic ic-red">⚠</span> 人工风险等级</h3>
+        <p>亲手把关，把面试中听到的「狼性文化」「大小周」等信号记成风险备注，随时回看。</p>
+        <div class="mini-panel">
+          <div class="mini-title">风险四色 <b>与列表视图联动配色</b></div>
+          <div class="risk-legend">
+            <span class="cap">等级：</span>
+            <span class="risk-chip risk-x">风险极高</span>
+            <span class="risk-chip risk-h">风险高</span>
+            <span class="risk-chip risk-m">风险中</span>
+            <span class="risk-chip risk-l">风险低</span>
+          </div>
+          <div class="ai-strip" style="background:rgba(248,113,113,.06);border-color:rgba(248,113,113,.25)">
+            <span class="lab" style="color:var(--danger)">备注</span>面试官亲口说「要倒逼自己」，疑似 996 · 社保按最低基数缴
+          </div>
+        </div>
+        <ul class="detail">
+          <li><span class="chk">✓</span><span><b>极/高/中/低</b>——四级标注，颜色全局一致</span></li>
+          <li><span class="chk">✓</span><span><b>风险备注</b>——记录具体信号，避免遗忘</span></li>
+          <li><span class="chk">✓</span><span><b>按风险分组</b>——高危公司一眼揪出</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 02 高效录入 ================= -->
+<section class="section" id="capture">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">02 · 快速建档</span>
+      <h2>录入零门槛<br>从看见到入库，<em>一步完成</em></h2>
+      <p>面试邀约截图、招聘软件弹窗、企业详情页链接——凡是眼睛看到的信息,都能快速沉淀成档案。</p>
+    </div>
+
+    <div class="bi-grid">
+      <!-- OCR -->
+      <div class="bi-card reveal">
+        <span class="num">A</span>
+        <h3><span class="ic ic-cyan">🔍</span> 离线 OCR 识别</h3>
+        <p>基于 Tesseract.js（WASM）本地识别，中文 + 英文模型，识别结果直接填入搜索框开始检索。</p>
+        <div class="ocr-mini">
+          <div class="big">🖼️</div>
+          <p>上传任意公司名称截图 / 招聘弹窗 → 自动提取文字 → 即可搜索定位</p>
+        </div>
+        <ul class="detail">
+          <li><span class="chk">✓</span><span><b>完全离线</b>——图片不出本机，隐私安全</span></li>
+          <li><span class="chk">✓</span><span><b>中英双语</b>——chi_sim + eng 模型</span></li>
+          <li><span class="chk">✓</span><span><b>一键出结果</b>——识别文本自动填入搜索</span></li>
+        </ul>
+      </div>
+
+      <!-- 收纳入口 -->
+      <div class="bi-card reveal" style="transition-delay:.1s">
+        <span class="num">B</span>
+        <h3><span class="ic ic-amber">📥</span> 多渠道收纳入库</h3>
+        <p>粘贴企业详情页链接一键抓取工商信息（爱企查），也可手工维护完整资料卡。</p>
+        <div class="flow-row">
+          <div class="flow-step"><b>链接抓取</b>粘贴企业详情页链接</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-step"><b>AI 解析</b>提取工商信息</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-step"><b>存入档案</b>填写风险与备注</div>
+        </div>
+        <ul class="detail">
+          <li><span class="chk">✓</span><span><b>同名查重</b>——重复收录前弹窗提醒</span></li>
+          <li><span class="chk">✓</span><span><b>完整字段</b>——官网 / 地址 / 联系人 / 简介</span></li>
+          <li><span class="chk">✓</span><span><b>失焦不丢</b>——未保存离开自动提醒</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 03 检索组织 ================= -->
+<section class="section" id="organize">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">03 · 检索与组织</span>
+      <h2>上百家公司，<br>也能<em>一眼定位</em></h2>
+      <p>搜索、标签、状态、排序、分组、双视图、批量操作——找到目标公司比翻通讯录还快。</p>
+    </div>
+
+    <div class="bi-grid">
+      <!-- 工具栏 -->
+      <div class="bi-card reveal">
+        <span class="num">C</span>
+        <h3><span class="ic ic-amber">⚙</span> 灵活的筛选面板</h3>
+        <p>关键词搜索（300ms 防抖即时响应）、标签多选、状态过滤，组合使用精确命中目标。</p>
+        <div class="toolbar-mock">
+          <div class="trow">
+            <div class="search-box">🔎 搜索公司名称…<span class="caret"></span></div>
+            <span class="pill-btn on">沟通中</span>
+            <span class="pill-btn">不再沟通</span>
+          </div>
+          <div class="trow" style="margin-top:9px">
+            <span class="pill-btn on">已读不回</span>
+            <span class="pill-btn">人力外包</span>
+            <span class="pill-btn on">风险高</span>
+            <span class="pill-btn">避雷</span>
+            <span class="mock-viewbtns"><span class="on">▦</span><span>≡</span></span>
+          </div>
+          <div class="trow" style="margin-top:9px">
+            <span class="pill-btn">最近更新<span class="srt">▼</span></span>
+            <span class="pill-btn on">AI 评分<span class="srt">▼</span></span>
+            <span class="pill-btn">风险等级</span>
+            <span class="pill-btn">名称</span>
+          </div>
+        </div>
+        <ul class="detail">
+          <li><span class="chk">✓</span><span><b>四种排序</b>——更新 / 评分 / 风险 / 名称，可升降序</span></li>
+          <li><span class="chk">✓</span><span><b>分组视图</b>——按风险等级或沟通状态自动分块</span></li>
+          <li><span class="chk">✓</span><span><b>偏好记忆</b>——排序与视图模式自动保存</span></li>
+        </ul>
+      </div>
+
+      <!-- 双视图 + 批量 -->
+      <div class="bi-card reveal" style="transition-delay:.1s">
+        <span class="num">D</span>
+        <h3><span class="ic ic-green">⬚</span> 卡片 / 列表双视图</h3>
+        <p>信息流卡片适合浏览，紧凑表格适合密集管理，一键切换，布局偏好自动记住。</p>
+        <div class="mini-panel">
+          <div class="group-label">
+            <span class="gdot" style="background:var(--accent)"></span>风险高 · 4 家
+            <span class="cnt">按风险分组</span>
+          </div>
+          <div class="mock-card" style="padding:8px 10px">
+            <span class="mock-rank" style="background:rgba(245,167,66,.16);color:var(--accent)">2</span>
+            <div class="mock-info"><div class="nm">×× 人力外派中心</div></div>
+            <span class="risk-chip risk-h">风险高</span>
+            <span class="mock-score low">45</span>
+          </div>
+          <div class="mock-card" style="padding:8px 10px">
+            <span class="mock-rank" style="background:rgba(245,167,66,.16);color:var(--accent)">5</span>
+            <div class="mock-info"><div class="nm">×× 技术服务（深圳）</div></div>
+            <span class="risk-chip risk-m">风险中</span>
+            <span class="mock-score bad">38</span>
+          </div>
+        </div>
+        <div class="batch-mock">
+          <span>已选中 <b class="cnt">3</b> 家公司</span>
+          <span class="sp"></span>
+          <span class="mini">标记不再沟通</span>
+          <span class="mini danger">批量删除</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 04 投递全流程 ================= -->
+<section class="section" id="pipeline">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">04 · 全流程追踪</span>
+      <h2>从投递到入职，<br>进度<em>全程在册</em></h2>
+      <p>岗位要求、薪资待遇、投递渠道、每轮沟通，全部沉淀在同一家公司档案里，永不丢失。</p>
+    </div>
+
+    <div class="bi-grid">
+      <!-- 岗位与投递 -->
+      <div class="bi-card reveal">
+        <span class="num">E</span>
+        <h3><span class="ic ic-amber">🗂</span> 岗位与投递记录</h3>
+        <p>一家公司可挂多个岗位，记录薪资、工作形式与 HR 联系方式；每次投递留痕。</p>
+        <div class="pos-row">
+          <span class="pname">前端开发工程师（自研）</span>
+          <span class="meta">驻场 · 北京</span>
+          <span class="salary">20–28K</span>
+        </div>
+        <div class="pos-row">
+          <span class="pname">Node.js 后端</span>
+          <span class="meta">远程 · 可兼职</span>
+          <span class="salary">15–22K</span>
+        </div>
+        <ul class="detail">
+          <li><span class="chk">✓</span><span><b>工作形式</b>——驻场 / 远程 / 混合</span></li>
+          <li><span class="chk">✓</span><span><b>投递渠道</b>——各招聘平台 / 官网 / 内推…</span></li>
+          <li><span class="chk">✓</span><span><b>HR 联系</b>——对接人 + 联系方式集中管理</span></li>
+        </ul>
+      </div>
+
+      <!-- 沟通时间线 -->
+      <div class="bi-card reveal" style="transition-delay:.1s">
+        <span class="num">F</span>
+        <h3><span class="ic ic-cyan">💬</span> 沟通对话时间线</h3>
+        <p>把与 HR 的每一轮对话按时间归位，标注平台与角色，面试进程一目了然。</p>
+        <div class="timeline-mock">
+          <div class="tl-line">
+            <span class="tl-dot"></span>
+            <div class="who"><b>我</b> · 某招聘平台</div>
+            <div class="msg">👋 您好，想了解一下贵司前端岗位的具体业务方向？</div>
+          </div>
+          <div class="tl-line in">
+            <span class="tl-dot ai-d"></span>
+            <div class="who"><b>HR</b> · 08-14 11:20</div>
+            <div class="msg">我们是电商中台，加班不多，双休，薪资可谈~</div>
+          </div>
+          <div class="tl-line">
+            <span class="tl-dot g-d"></span>
+            <div class="who"><b>投递记录</b> · 某招聘平台</div>
+            <div class="msg">已投递「数据分析师」岗位</div>
+          </div>
+        </div>
+        <ul class="detail">
+          <li><span class="chk">✓</span><span><b>双向记录</b>——我方回复与对方反馈分列</span></li>
+          <li><span class="chk">✓</span><span><b>平台标注</b>——跨平台沟通不串线</span></li>
+          <li><span class="chk">✓</span><span><b>已读不回</b>——标记后自动灰显提醒</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 05 数据安全 ================= -->
+<section class="section" id="backup">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">05 · 数据安全</span>
+      <h2>数据只属于你，<br>想带走的<em>都能带走</em></h2>
+      <p>所有数据保存在本地数据库，支持一键备份与恢复，换设备、重装系统都丢不了。</p>
+    </div>
+
+    <div class="sec-grid">
+      <!-- 备份导入导出 -->
+      <div class="bi-card reveal">
+        <span class="num">G</span>
+        <h3><span class="ic ic-green">⤓</span> 备份 / 恢复</h3>
+        <p>JSON 格式一键导出全部档案；导入前先预览分析，确认后再写入，同名公司自动跳过。</p>
+        <div class="import-flow">
+          <div class="if-row"><span class="if-num">1</span><span>选择备份文件 → 自动<b>解析预览</b>（不落库）</span></div>
+          <div class="if-preview">
+            <span class="cell">公司 <b>18 家</b></span>
+            <span class="cell">岗位 <b>26 个</b></span>
+            <span class="cell">沟通 <b>73 条</b></span>
+            <span class="cell">投递 <b>31 条</b></span>
+          </div>
+          <div class="if-row"><span class="if-num">2</span><span>确认导入 → <b>事务写入</b>，同名公司自动跳过</span></div>
+          <div class="if-row"><span class="if-num">✓</span><span>导入完成：18 家、2 家同名跳过</span></div>
+        </div>
+        <ul class="detail">
+          <li><span class="chk">✓</span><span><b>事务导入</b>——中途失败可整体回滚</span></li>
+          <li><span class="chk">✓</span><span><b>导入预览</b>——先看清内容再确认</span></li>
+          <li><span class="chk">✓</span><span><b>同名防重</b>——不会把档案倒回重复的</span></li>
+        </ul>
+      </div>
+
+      <!-- 本地 + 表单保护 -->
+      <div class="bi-card reveal" style="transition-delay:.1s">
+        <span class="num">H</span>
+        <h3><span class="ic ic-amber">🔒</span> 本地优先 · 防丢保护</h3>
+        <p>数据存储在本地数据库，不依赖任何云端服务；编辑过程中意外离开，系统会先问一句。</p>
+        <div class="guard-strip">
+          <span class="ic">🛡</span>
+          <span><b style="color:var(--ink)">离站提醒：</b>表单有未保存修改时，离开页面会弹出确认，避免辛辛苦苦填的资料误触丢失。</span>
+        </div>
+        <div class="guard-strip" style="border-color:rgba(82,199,232,.3);background:rgba(82,199,232,.06)">
+          <span class="ic" style="color:var(--ai)">🏠</span>
+          <span><b style="color:var(--ink)">本机保存：</b>公司档案、评分记录、设置全部本地存储（SQLite），DeepSeek Key 也仅保存在本机用于评分调用。</span>
+        </div>
+        <ul class="detail">
+          <li><span class="chk">✓</span><span><b>纯本地运行</b>——无账号、无上传、无广告</span></li>
+          <li><span class="chk">✓</span><span><b>自定义弹窗</b>——确认框与通知与界面风格统一</span></li>
+          <li><span class="chk">✓</span><span><b>快捷操作</b>——键盘导航 + 右键菜单，效率拉满</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CTA ================= -->
+<section class="section" id="get">
+  <div class="container">
+    <div class="cta-box reveal">
+      <span class="eyebrow">开始防坑</span>
+      <h2>下一份 offer 之前，<br>先给公司<em>做个体检</em></h2>
+      <p>把投递的每一家公司放进雷达里，让风险公司提前现形，让每一次面试都心里有底。</p>
+      <div class="ctas">
+        <a class="btn btn-primary" href="#ai">查看功能亮点</a>
+        <a class="btn btn-ghost" href="#">下载安装包（Windows）</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= Footer ================= -->
+<footer>
+  <div class="container" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px; width:100%;">
+    <div class="tagline">应聘避坑小工具 · 求职路上的避坑雷达</div>
+    <div class="mono">Tauri × Vue 3 × SQLite · 一切数据，本机掌控</div>
+  </div>
+</footer>
+
+<script>
+// 滚动进场动画：元素进入视口时添加 .in
+const io = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) {
+        e.target.classList.add('in')
+        io.unobserve(e.target)
+      }
+    })
+  },
+  { threshold: 0.12 },
+)
+document.querySelectorAll('.reveal').forEach((el) => io.observe(el))
+</script>
+</body>
+</html>

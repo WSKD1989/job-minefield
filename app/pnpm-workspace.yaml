@@ -1,0 +1,11 @@
+# pnpm 工作区配置：注册允许构建脚本的依赖
+packages:
+  - "."
+
+allowBuilds:
+  esbuild: set this to true or false
+  tesseract.js: set this to true or false
+
+onlyBuiltDependencies:
+  - esbuild
+  - tesseract.js

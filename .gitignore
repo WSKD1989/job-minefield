@@ -1,0 +1,19 @@
+# ---------- 系统 / 编辑器 ----------
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# ---------- 日志 ----------
+*.log
+logs/
+
+# ---------- 前端（node_modules / dist 由 app/.gitignore 覆盖，此处兜底） ----------
+node_modules/
+dist/
+
+# ---------- Rust / Tauri ----------
+app/src-tauri/target/
