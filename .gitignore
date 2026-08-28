@@ -7,8 +7,6 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
-# ---------- 本地工具目录（非项目源码） ----------
-harness/
 
 # ---------- 日志 ----------
 *.log

@@ -1,0 +1,20 @@
+{
+  "name": "yingpin-cli",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "应聘避坑小工具的 DeepSeek Harness CLI 插件：零依赖命令行工具，让 DSH 直接查询/录入/评估求职避坑数据库（含 DSH 技能与一键安装脚本）",
+  "bin": {
+    "yingpin": "cli.mjs"
+  },
+  "scripts": {
+    "start": "node cli.mjs --help",
+    "test": "node test.mjs",
+    "doctor": "node cli.mjs doctor",
+    "import": "node tools/import-capture.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.0"
+  }
+}

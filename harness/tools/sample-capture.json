@@ -1,0 +1,29 @@
+{
+  "platform": "BOSS直聘",
+  "source_url": "https://www.zhipin.com/web/geek/chat?from=job",
+  "captured_at": 1787900000,
+  "hr": "陈女士(HR)",
+  "job": {
+    "title": "Java开发工程师",
+    "salary": "20-35K",
+    "salary_note": "13薪",
+    "location": "广州·天河",
+    "experience": "3-5年",
+    "education": "本科",
+    "jd": "负责公司核心业务系统后端开发，Java/SpringBoot 技术栈，参与需求评审与方案设计。",
+    "keywords": "Java,SpringBoot,MySQL"
+  },
+  "company": {
+    "name": "示例科技（广州）有限公司",
+    "industry": "互联网",
+    "funding": "A轮",
+    "headcount": "100-499人",
+    "address": "广州市天河区示例路 88 号",
+    "intro": "示例公司，主营企业级 SaaS 产品，团队以自研为主。"
+  },
+  "messages": [
+    { "role": "对方", "contact": "陈女士(HR)", "content": "您好，看到您投递的 Java 开发岗位，方便聊聊吗？", "at": 1787899000 },
+    { "role": "我方", "contact": "陈女士(HR)", "content": "您好，方便。请问薪资范围是？", "at": 1787899060 },
+    { "role": "对方", "contact": "陈女士(HR)", "content": "20-35K，13 薪，周末双休。", "at": 1787899100 }
+  ]
+}
